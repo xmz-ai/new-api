@@ -96,6 +96,7 @@ type RelayInfo struct {
 	isFirstResponse   bool
 	//SendLastReasoningResponse bool
 	IsStream               bool
+	ForceUpstreamStream    bool // force_stream channel setting: upstream uses stream=true, client receives non-stream
 	IsGeminiBatchEmbedding bool
 	IsPlayground           bool
 	UsePrice               bool
@@ -224,6 +225,10 @@ func (info *RelayInfo) InitChannelMeta(c *gin.Context) {
 	// 重置某些字段，例如模型名称等
 	if info.Request != nil {
 		info.Request.SetModelName(info.OriginModelName)
+	}
+
+	if channelMeta.ChannelSetting.ForceStream && !info.IsStream {
+		info.ForceUpstreamStream = true
 	}
 }
 
