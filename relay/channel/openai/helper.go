@@ -34,6 +34,8 @@ func HandleStreamFormat(c *gin.Context, info *relaycommon.RelayInfo, data string
 }
 
 func handleClaudeFormat(c *gin.Context, data string, info *relaycommon.RelayInfo) error {
+	logger.LogDebug(c, "[CONV-IN  chat-chunk→claude] "+data)
+
 	var streamResponse dto.ChatCompletionsStreamResponse
 	if err := common.Unmarshal(common.StringToByteSlice(data), &streamResponse); err != nil {
 		return err
@@ -44,6 +46,9 @@ func handleClaudeFormat(c *gin.Context, data string, info *relaycommon.RelayInfo
 	}
 	claudeResponses := service.StreamResponseOpenAI2Claude(&streamResponse, info)
 	for _, resp := range claudeResponses {
+		if respJSON, e := common.Marshal(resp); e == nil {
+			logger.LogDebug(c, "[CONV-OUT chat-chunk→claude] "+string(respJSON))
+		}
 		helper.ClaudeData(c, *resp)
 	}
 	return nil

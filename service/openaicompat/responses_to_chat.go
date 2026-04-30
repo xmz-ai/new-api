@@ -42,28 +42,26 @@ func ResponsesResponseToChatCompletionsResponse(resp *dto.OpenAIResponsesRespons
 	created := resp.CreatedAt
 
 	var toolCalls []dto.ToolCallResponse
-	if text == "" && len(resp.Output) > 0 {
-		for _, out := range resp.Output {
-			if out.Type != "function_call" {
-				continue
-			}
-			name := strings.TrimSpace(out.Name)
-			if name == "" {
-				continue
-			}
-			callId := strings.TrimSpace(out.CallId)
-			if callId == "" {
-				callId = strings.TrimSpace(out.ID)
-			}
-			toolCalls = append(toolCalls, dto.ToolCallResponse{
-				ID:   callId,
-				Type: "function",
-				Function: dto.FunctionResponse{
-					Name:      name,
-					Arguments: out.Arguments,
-				},
-			})
+	for _, out := range resp.Output {
+		if out.Type != "function_call" {
+			continue
 		}
+		name := strings.TrimSpace(out.Name)
+		if name == "" {
+			continue
+		}
+		callId := strings.TrimSpace(out.CallId)
+		if callId == "" {
+			callId = strings.TrimSpace(out.ID)
+		}
+		toolCalls = append(toolCalls, dto.ToolCallResponse{
+			ID:   callId,
+			Type: "function",
+			Function: dto.FunctionResponse{
+				Name:      name,
+				Arguments: out.Arguments,
+			},
+		})
 	}
 
 	finishReason := "stop"
@@ -77,7 +75,6 @@ func ResponsesResponseToChatCompletionsResponse(resp *dto.OpenAIResponsesRespons
 	}
 	if len(toolCalls) > 0 {
 		msg.SetToolCalls(toolCalls)
-		msg.Content = ""
 	}
 
 	out := &dto.OpenAITextResponse{
