@@ -222,3 +222,23 @@ func TestChatCompletionsRequestToResponsesRequestKeepsEmptyStringToolCallArgumen
 	require.Contains(t, args, "query")
 	require.Equal(t, "", args["query"])
 }
+
+func TestConvertChatToolParametersDropsOpenAIUnsupportedNullableKey(t *testing.T) {
+	parameters := convertChatToolParametersToResponsesParameters(map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"pages": map[string]any{
+				"type":     "string",
+				"nullable": true,
+			},
+		},
+		"required": []any{"pages"},
+	})
+
+	params := parameters.(map[string]any)
+	properties := params["properties"].(map[string]any)
+	pages := properties["pages"].(map[string]any)
+	require.Equal(t, "string", pages["type"])
+	require.NotContains(t, pages, "nullable")
+	require.ElementsMatch(t, []string{"pages"}, params["required"])
+}
