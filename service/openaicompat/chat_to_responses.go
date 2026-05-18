@@ -120,7 +120,7 @@ func normalizeResponsesToolSchema(value any, isRoot bool) (any, bool) {
 
 	out := make(map[string]any, len(schema)+1)
 	for key, val := range schema {
-		if val == nil {
+		if val == nil || key == "nullable" {
 			continue
 		}
 		out[key] = val
