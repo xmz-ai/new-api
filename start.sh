@@ -3,6 +3,7 @@ set -euo pipefail
 
 CONTAINER_NAME="new-api"
 IMAGE="new-api:latest"
+REGISTRY_IMAGE="${REGISTRY_IMAGE:-registry.xmz.ai/new-api}"
 ENV_FILE=".env"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -87,9 +88,20 @@ do_status() {
 
 do_build() {
     check_docker
-    echo "Building image..."
-    docker build -t "$IMAGE" "$SCRIPT_DIR"
-    echo "Done. Run '$0 restart' to apply the update."
+    local image_tag="${IMAGE_TAG:-$(date +%Y%m%d)}"
+    local remote_image="${REGISTRY_IMAGE}:${image_tag}"
+
+    echo "Building image $remote_image..."
+    docker build \
+        -t "$IMAGE" \
+        -t "$remote_image" \
+        "$SCRIPT_DIR"
+
+    echo "Pushing image $remote_image..."
+    docker push "$remote_image"
+
+    echo "Done. Pushed $remote_image"
+    echo "Run '$0 restart' to apply the local $IMAGE image."
 }
 
 case "${1:-start}" in
