@@ -5,13 +5,24 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNormalizeCodexImageChannelTestEndpoint(t *testing.T) {
+	channel := &model.Channel{Type: constant.ChannelTypeCodex}
+	require.Equal(t, string(constant.EndpointTypeImageGeneration), normalizeChannelTestEndpoint(channel, "gpt-image-2", ""))
+	require.Equal(t, string(constant.EndpointTypeOpenAIResponse), normalizeChannelTestEndpoint(channel, "gpt-5.4", ""))
+	require.Equal(t, string(constant.EndpointTypeEmbeddings), normalizeChannelTestEndpoint(channel, "gpt-image-2", string(constant.EndpointTypeEmbeddings)))
+	require.False(t, normalizeChannelTestStream(string(constant.EndpointTypeImageGeneration), true))
+	require.True(t, normalizeChannelTestStream(string(constant.EndpointTypeOpenAIResponse), true))
+}
 
 func TestSettleTestQuotaUsesTieredBilling(t *testing.T) {
 	info := &relaycommon.RelayInfo{

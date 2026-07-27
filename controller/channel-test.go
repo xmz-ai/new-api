@@ -52,9 +52,19 @@ func normalizeChannelTestEndpoint(channel *model.Channel, modelName, endpointTyp
 		return string(constant.EndpointTypeOpenAIResponseCompact)
 	}
 	if channel != nil && channel.Type == constant.ChannelTypeCodex {
+		if common.IsImageGenerationModel(modelName) {
+			return string(constant.EndpointTypeImageGeneration)
+		}
 		return string(constant.EndpointTypeOpenAIResponse)
 	}
 	return normalized
+}
+
+func normalizeChannelTestStream(endpointType string, isStream bool) bool {
+	if constant.EndpointType(endpointType) == constant.EndpointTypeImageGeneration {
+		return false
+	}
+	return isStream
 }
 
 func testChannel(channel *model.Channel, testModel string, endpointType string, isStream bool) testResult {
@@ -93,6 +103,7 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 	}
 
 	endpointType = normalizeChannelTestEndpoint(channel, testModel, endpointType)
+	isStream = normalizeChannelTestStream(endpointType, isStream)
 
 	requestPath := "/v1/chat/completions"
 

@@ -34,7 +34,11 @@ func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInf
 }
 
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
-	return nil, errors.New("codex channel: endpoint not supported")
+	converted, err := convertImageRequest(c, info, request)
+	if err != nil {
+		return nil, types.NewErrorWithStatusCode(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
+	return converted, nil
 }
 
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
@@ -108,10 +112,16 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
+	if err := validateImagePassThrough(c, info); err != nil {
+		return nil, err
+	}
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
+	if isImageRelayMode(info.RelayMode) {
+		return openai.OpenaiHandlerWithUsage(c, info, resp)
+	}
 	if info.RelayMode != relayconstant.RelayModeResponses && info.RelayMode != relayconstant.RelayModeResponsesCompact {
 		return nil, types.NewError(errors.New("codex channel: endpoint not supported"), types.ErrorCodeInvalidRequest)
 	}
@@ -130,7 +140,8 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 }
 
 func (a *Adaptor) GetModelList() []string {
-	return ModelList
+	models := append([]string{}, ModelList...)
+	return append(models, ImageModelList...)
 }
 
 func (a *Adaptor) GetChannelName() string {
@@ -138,8 +149,11 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
+	if isImageRelayMode(info.RelayMode) {
+		return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, imageRequestPath(info.RelayMode), info.ChannelType), nil
+	}
 	if info.RelayMode != relayconstant.RelayModeResponses && info.RelayMode != relayconstant.RelayModeResponsesCompact {
-		return "", errors.New("codex channel: only /v1/responses and /v1/responses/compact are supported")
+		return "", errors.New("codex channel: only /v1/responses, /v1/responses/compact, /v1/images/generations, and /v1/images/edits are supported")
 	}
 	path := "/backend-api/codex/responses"
 	if info.RelayMode == relayconstant.RelayModeResponsesCompact {
@@ -192,5 +206,6 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 		req.Set("Accept", "application/json")
 	}
 
+	applyImageRequestHeaders(req, info)
 	return nil
 }
