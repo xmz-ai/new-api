@@ -20,9 +20,11 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ env.DEPLOY_PORT }}
+          command_timeout: 30m
+          script_stop: true
           script: |
+            set -euo pipefail
             cd ${{ env.DEPLOY_PATH }}
             git fetch origin
             git reset --hard origin/develop
-            ./start.sh build
-            ./start.sh restart
+            ./start.sh deploy

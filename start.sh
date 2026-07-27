@@ -104,6 +104,11 @@ do_build() {
     echo "Run '$0 restart' to apply the local $IMAGE image."
 }
 
+do_deploy() {
+    do_build
+    do_restart
+}
+
 case "${1:-start}" in
     start)   do_start   ;;
     stop)    do_stop    ;;
@@ -111,8 +116,9 @@ case "${1:-start}" in
     logs)    do_logs    ;;
     status)  do_status  ;;
     build)   do_build   ;;
+    deploy)  do_deploy  ;;
     *)
-        echo "Usage: $0 {start|stop|restart|logs|status|build}" >&2
+        echo "Usage: $0 {start|stop|restart|logs|status|build|deploy}" >&2
         exit 1
         ;;
 esac
