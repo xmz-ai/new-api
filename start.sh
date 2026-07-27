@@ -109,6 +109,49 @@ do_deploy() {
     do_restart
 }
 
+do_deploy_image() {
+    check_docker
+
+    local image_archive="${1:-}"
+    local image_tag="${2:-$(date +%Y%m%d)}"
+    local source_image="${3:-}"
+    local remote_image="${REGISTRY_IMAGE}:${image_tag}"
+
+    if [[ -z "$image_archive" || ! -f "$image_archive" ]]; then
+        echo "Error: image archive not found: ${image_archive:-<empty>}" >&2
+        exit 1
+    fi
+    if [[ ! "$image_tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+        echo "Error: invalid image tag: $image_tag" >&2
+        exit 1
+    fi
+    if [[ -z "$source_image" ]]; then
+        echo "Error: source image is required" >&2
+        exit 1
+    fi
+
+    echo "Loading image $source_image..."
+    docker load --input "$image_archive"
+    if ! docker image inspect "$source_image" >/dev/null 2>&1; then
+        echo "Error: archive did not contain $source_image" >&2
+        exit 1
+    fi
+
+    docker tag "$source_image" "$IMAGE"
+    docker tag "$source_image" "$remote_image"
+
+    echo "Pushing image $remote_image..."
+    docker push "$remote_image"
+
+    do_restart
+
+    if [[ "$source_image" != "$IMAGE" && "$source_image" != "$remote_image" ]]; then
+        docker image rm "$source_image" >/dev/null
+    fi
+
+    echo "Deployed and pushed $remote_image"
+}
+
 case "${1:-start}" in
     start)   do_start   ;;
     stop)    do_stop    ;;
@@ -117,8 +160,12 @@ case "${1:-start}" in
     status)  do_status  ;;
     build)   do_build   ;;
     deploy)  do_deploy  ;;
+    deploy-image)
+        shift
+        do_deploy_image "$@"
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|logs|status|build|deploy}" >&2
+        echo "Usage: $0 {start|stop|restart|logs|status|build|deploy|deploy-image}" >&2
         exit 1
         ;;
 esac
